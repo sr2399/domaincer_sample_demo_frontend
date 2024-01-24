@@ -4,7 +4,7 @@ import { useTheme, createStyles, makeStyles } from '@mui/styles';
 import GLogout from '../../../Auth/logout';
 import { gapi } from 'gapi-script';
 import { GoogleLogin } from 'react-google-login';
-
+import { handleError, checkStatus, parseJSON } from '../../../../common/core/common';
 let clientID = "419057681447-bge5sr1qi0kpfsaeggkrn7p5bhchsmbo.apps.googleusercontent.com"
 
 
@@ -75,6 +75,7 @@ const SignInScreen = (props: any) => {
     username: '',
     password: ''
   })
+  const [user_token, setuser_token] = useState(null)
 
 
 
@@ -90,12 +91,62 @@ const SignInScreen = (props: any) => {
   });
 
 
+  const composeRequest = (
+    url: string,
+    method: string,
+    body: any,
+  
+  ) => {
+
+    try{
+      if (method === 'POST') { 
+        return fetch(url, {
+          headers: {'Content-Type':'application/json'},
+          method: method,
+          body: body,
+        });
+      }
+
+    }catch {
+      console.log('error in asyncStorage');
+    }
+
+    return fetch(url, {
+      headers: {'Content-Type':'application/json'},
+      method: method,
+      body: body
+    });
+  }
+
+
   const onSuccess = (res: any) => {
     console.log("Response", res)
-    props.setUserToken(res.accessToken)
 
-    console.log("loggedIn", res.profileObj);
+    let userToken = res.accessToken ? res.accessToken : null
+    if (userToken) {
+      setuser_token(userToken)
+      //let userDetails = { userToken : userToken  }
+      let url = 'api/gauth/login/google-oauth'
+      let data = JSON.stringify({ "user_token" : user_token })
+      composeRequest(url,'POST', data)
+        .catch(handleError) // handle network issues
+        .then(checkStatus)
+        .then(parseJSON)
+        .then((data: any) => {
+          // console.log("results",data)
+          // props.setUserToken(res.accessToken)
+          // console.log("loggedIn", res.profileObj);
 
+
+
+        })
+        .catch((error: any) => {
+          console.log("loginFailed", null );
+
+        });
+      
+      
+    }
   }
 
 
@@ -104,6 +155,31 @@ const SignInScreen = (props: any) => {
     console.log("LoginFailed", res);
   }
 
+  const signInback =()=>{
+    if(user_token){
+
+// let userDetails = { userToken : userToken  }
+      let url = 'api/gauth/login/google-oauth'
+      let data = JSON.stringify({ "user_token" : user_token })
+      composeRequest(url,'POST', data)
+        .catch(handleError) // handle network issues
+        .then(checkStatus)
+        .then(parseJSON)
+        .then((data: any) => {
+          // console.log("results",data)
+          // props.setUserToken(res.accessToken)
+          // console.log("loggedIn", res.profileObj);
+
+
+
+        })
+        .catch((error: any) => {
+          console.log("loginFailed", null );
+
+        });
+    }
+
+  }
 
 
   const renderUserSignIn = () => {
@@ -132,7 +208,7 @@ const SignInScreen = (props: any) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}
-          // onSubmit={this._signInAsync}
+          onSubmit={signInback}
           // add submitFunc
           >
             <TextField
